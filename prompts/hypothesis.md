@@ -58,3 +58,5 @@ List 3–5 factors that could disqualify this account or make them say no. Base 
 Provide your analysis in clear, actionable sections. Be specific—reference actual details from the research, not generic statements. Every recommendation should tie back to evidence from the input.
 
 **Important:** Generate the complete hypothesis. You MUST output all five sections in this order: 1. Why This Account, 2. Why Now, 3. Proof Points / Evidence to Cite, 4. Tech Stack, 5. Risks / Why We Might Lose. Do not stop early. Sections 4 (Tech Stack) and 5 (Risks) are required—always include them, even if brief. Do not omit any section.
+
+**Before you finish:** Check that your response includes section headers for all five sections (Why This Account, Why Now, Proof Points / Evidence to Cite, Tech Stack, Risks / Why We Might Lose). If you have not written section 3, 4, and 5, continue writing until all five are complete.

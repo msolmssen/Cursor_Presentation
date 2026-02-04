@@ -1221,7 +1221,7 @@ def generate_hypothesis_with_ai(prompt: str, provider: str) -> str:
                 prompt,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.7,
-                    max_output_tokens=6144,
+                    max_output_tokens=8192,
                 )
             )
             return response.text
@@ -1244,7 +1244,7 @@ def generate_hypothesis_with_ai(prompt: str, provider: str) -> str:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=6144
+                max_tokens=8192
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -1285,7 +1285,7 @@ def generate_hypothesis(research_data: dict, use_demo: bool = False) -> str:
     
     # Add system context for Gemini (which doesn't have separate system messages)
     if provider == "gemini":
-        prompt = f"You are an expert B2B sales strategist. Generate a complete, actionable outbound hypothesis. Always finish every section and sentence—do not stop mid-sentence or omit sections. You MUST include all five sections including Tech Stack and Risks.\n\n{prompt}"
+        prompt = f"You are an expert B2B sales strategist. Generate a complete, actionable outbound hypothesis. Your response MUST include all five sections (Why This Account, Why Now, Proof Points, Tech Stack, Risks). Do not stop after section 2—always complete sections 3, 4, and 5. Use up to 8192 tokens if needed.\n\n{prompt}"
     
     try:
         return generate_hypothesis_with_ai(prompt, provider)
