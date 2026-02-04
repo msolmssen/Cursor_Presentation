@@ -26,6 +26,27 @@ _secrets_path = Path(__file__).parent / "local_secrets.env"
 if _secrets_path.exists():
     load_dotenv(_secrets_path)
 
+
+def _get_openai_key() -> str:
+    try:
+        s = getattr(st, "secrets", None)
+        if s and "OPENAI_API_KEY" in s:
+            return (s.get("OPENAI_API_KEY") or "").strip()
+    except Exception:
+        pass
+    return (os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key") or "") or ""
+
+
+def _get_gemini_key() -> str:
+    try:
+        s = getattr(st, "secrets", None)
+        if s and "GEMINI_API_KEY" in s:
+            return (s.get("GEMINI_API_KEY") or "").strip()
+    except Exception:
+        pass
+    return (os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key") or "") or ""
+
+
 # Configure page
 st.set_page_config(
     page_title="Outbound Engine",
@@ -780,8 +801,8 @@ if "ae_handoff" not in st.session_state:
 
 
 def get_openai_client():
-    """Get OpenAI client with API key from environment or sidebar."""
-    api_key = os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key")
+    """Get OpenAI client with API key from Streamlit secrets, env, or sidebar."""
+    api_key = _get_openai_key()
     if api_key:
         return OpenAI(api_key=api_key)
     return None
@@ -791,7 +812,7 @@ def list_available_gemini_models():
     """List available Gemini models for debugging."""
     if not GEMINI_AVAILABLE:
         return []
-    api_key = os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key")
+    api_key = _get_gemini_key()
     if not api_key:
         return []
     try:
@@ -807,10 +828,10 @@ def list_available_gemini_models():
 
 
 def get_gemini_client():
-    """Get Gemini client with API key from environment or sidebar."""
+    """Get Gemini client with API key from Streamlit secrets, env, or sidebar."""
     if not GEMINI_AVAILABLE:
         return None
-    api_key = os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key")
+    api_key = _get_gemini_key()
     if api_key:
         genai.configure(api_key=api_key)
         # Try different model names in order of preference
@@ -1788,9 +1809,9 @@ def render_status_badges():
     provider = st.session_state.get("ai_provider", "gemini")
     
     if provider == "openai":
-        has_api_key = bool(os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key"))
+        has_api_key = bool(_get_openai_key())
     else:
-        has_api_key = bool(os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key"))
+        has_api_key = bool(_get_gemini_key())
     
     badges_html = '<div style="margin-bottom: 1rem;">'
     
@@ -1873,7 +1894,7 @@ def render_sidebar():
             
             # API Key inputs
             if provider == "openai":
-                openai_key = os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key", "")
+                openai_key = _get_openai_key()
                 if not openai_key:
                     api_key = st.text_input(
                         "OpenAI API Key",
@@ -1908,7 +1929,7 @@ def render_sidebar():
                         except Exception as e:
                             st.warning(f"Could not save: {e}")
             else:  # Gemini
-                gemini_key = os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key", "")
+                gemini_key = _get_gemini_key()
                 if not gemini_key:
                     api_key = st.text_input(
                         "Gemini API Key",
@@ -2065,9 +2086,9 @@ def render_input_page():
     demo_mode = st.session_state.get("demo_mode", False)
     provider = get_ai_provider()
     if provider == "openai":
-        has_api_key = bool(os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key"))
+        has_api_key = bool(_get_openai_key())
     else:
-        has_api_key = bool(os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key"))
+        has_api_key = bool(_get_gemini_key())
     can_generate = demo_mode or has_api_key
     
     if not can_generate:
@@ -2281,9 +2302,9 @@ def render_sequence_page():
     demo_mode = st.session_state.get("demo_mode", False)
     provider = get_ai_provider()
     if provider == "openai":
-        has_api_key = bool(os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key"))
+        has_api_key = bool(_get_openai_key())
     else:
-        has_api_key = bool(os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key"))
+        has_api_key = bool(_get_gemini_key())
     can_generate = demo_mode or has_api_key
     
     if st.button("Generate sequences", type="primary", use_container_width=True, disabled=not can_generate):
@@ -2426,7 +2447,7 @@ def render_ae_handoff_page():
     
     demo_mode = st.session_state.get("demo_mode", False)
     provider = get_ai_provider()
-    has_api_key = bool(os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key")) if provider == "openai" else bool(os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key"))
+    has_api_key = bool(_get_openai_key()) if provider == "openai" else bool(_get_gemini_key())
     can_generate = has_api_key and not demo_mode
     
     if st.button("Generate AE Handoff", type="primary", use_container_width=True, disabled=not can_generate):
