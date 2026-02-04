@@ -1289,6 +1289,7 @@ def generate_hypothesis(research_data: dict, use_demo: bool = False) -> str:
         return generate_hypothesis_with_ai(prompt, provider)
     except Exception as e:
         error_msg = str(e)
+        st.session_state["last_api_error"] = error_msg
         if "QUOTA_EXCEEDED" in error_msg or "RATE_LIMIT" in error_msg:
             st.warning(f"⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode.")
             return generate_demo_hypothesis(research_data)
@@ -1466,6 +1467,7 @@ No specific prospect—use placeholders so this sequence can scale:
             return response.choices[0].message.content
     except Exception as e:
         error_msg = str(e)
+        st.session_state["last_api_error"] = error_msg
         is_quota = "quota" in error_msg.lower() or "insufficient" in error_msg.lower() or "429" in error_msg or "RATE_LIMIT" in str(e) or "resource_exhausted" in error_msg.lower()
         if is_quota:
             st.warning("⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode.")
@@ -1868,6 +1870,29 @@ def render_status_badges():
     st.markdown(badges_html, unsafe_allow_html=True)
 
 
+def _debug_secrets():
+    """Show safe debug info for Streamlit Cloud key issues (no key values)."""
+    with st.sidebar:
+        with st.expander("🔧 Debug: API key status"):
+            gkey = _get_gemini_key()
+            from_env = "yes" if os.environ.get("GEMINI_API_KEY") else "no"
+            secrets_obj = getattr(st, "secrets", None)
+            secret_keys = []
+            if secrets_obj:
+                try:
+                    if hasattr(secrets_obj, "keys"):
+                        secret_keys = list(secrets_obj.keys())
+                    else:
+                        secret_keys = [k for k in dir(secrets_obj) if not k.startswith("_")]
+                except Exception:
+                    secret_keys = ["(could not list)"]
+            st.caption("Gemini key present: **yes** (" + str(len(gkey)) + " chars)" if gkey else "Gemini key present: **no**")
+            st.caption("In os.environ: " + from_env)
+            st.caption("st.secrets keys: " + ", ".join(str(k) for k in secret_keys[:20]))
+            if st.session_state.get("last_api_error"):
+                st.error("Last error: " + (st.session_state["last_api_error"][:200] + "…" if len(st.session_state["last_api_error"]) > 200 else st.session_state["last_api_error"]))
+
+
 def render_sidebar():
     """Render the sidebar with navigation and settings."""
     with st.sidebar:
@@ -1876,6 +1901,7 @@ def render_sidebar():
         
         # Status badges
         render_status_badges()
+        _debug_secrets()
         
         st.markdown("---")
         st.markdown("### Navigation")
