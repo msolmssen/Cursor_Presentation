@@ -42,17 +42,48 @@ def _get_gemini_key() -> str:
         s = getattr(st, "secrets", None)
         if s:
             # Top-level (Streamlit Cloud often uses this)
-            key = s.get("GEMINI_API_KEY")
+            key = s.get("GEMINI_API_KEY") if hasattr(s, "get") else getattr(s, "GEMINI_API_KEY", None)
             if key and isinstance(key, str):
                 return key.strip()
             # Nested (e.g. [api_keys] section in TOML)
-            for section in ("api_keys", "secrets", "default"):
-                sub = s.get(section) if isinstance(s.get(section), dict) else None
-                if sub and sub.get("GEMINI_API_KEY"):
-                    return str(sub["GEMINI_API_KEY"]).strip()
+            if hasattr(s, "get"):
+                for section in ("api_keys", "secrets", "default"):
+                    sub = s.get(section) if isinstance(s.get(section), dict) else None
+                    if sub and sub.get("GEMINI_API_KEY"):
+                        return str(sub["GEMINI_API_KEY"]).strip()
     except Exception:
         pass
     return (os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key") or "") or ""
+
+
+def _inject_streamlit_secrets_into_env():
+    """Copy Streamlit Cloud secrets into os.environ so all code sees them. Run once at startup."""
+    try:
+        s = getattr(st, "secrets", None)
+        if not s:
+            return
+        for name in ("GEMINI_API_KEY", "OPENAI_API_KEY"):
+            if os.environ.get(name):
+                continue
+            val = None
+            # Try exact name
+            if hasattr(s, "get") and name in s:
+                val = s.get(name)
+            if not val:
+                val = getattr(s, name, None)
+            # Try lowercase (some hosts normalize keys)
+            if not val and hasattr(s, "get"):
+                val = s.get(name.lower(), None) or s.get(name.replace("_", ""), None)
+            if not val and hasattr(s, "get"):
+                for section in ("api_keys", "secrets", "default"):
+                    sub = s.get(section) if isinstance(s.get(section), dict) else None
+                    if sub and sub.get(name):
+                        val = sub[name]
+                        break
+            if val and isinstance(val, str) and val.strip():
+                os.environ[name] = val.strip()
+    except Exception:
+        pass
 
 
 # Configure page
@@ -61,6 +92,7 @@ st.set_page_config(
     page_icon="🎯",
     layout="wide"
 )
+_inject_streamlit_secrets_into_env()
 
 # Inject warm color scheme CSS
 def inject_warm_styles():
