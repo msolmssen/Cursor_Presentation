@@ -1390,7 +1390,7 @@ def generate_sequence(lane: dict, hypothesis: str, prospect_info: dict, use_demo
     has_prospect = prospect_info.get("first_name") and prospect_info.get("company")
     if has_prospect:
         prospect_context = f"""
-Prospect (for this draft):
+Prospect (for this draft)—USE THESE EXACT NAMES IN THE COPY; do not use [Company] or [First Name]:
 - Name: {prospect_info.get('first_name', '')} {prospect_info.get('last_name', '').strip() or ''}
 - Title: {prospect_info.get('title', lane.get('name', ''))}
 - Company: {prospect_info.get('company', '')}
@@ -2367,7 +2367,7 @@ def render_sequence_page():
     
     # Optional example prospect (for draft personalization)
     st.markdown("#### Example prospect (optional)")
-    st.markdown("Add one prospect to personalize the draft; otherwise sequences use placeholders like [First Name] and [Company] so you can scale.")
+    st.markdown("Leave blank to get a sequence for the company in your hypothesis, with **[First Name]** as the only placeholder—use it across 10–12 contacts at that company. Fill in to personalize one draft.")
     
     col1, col2 = st.columns(2)
     with col1:
