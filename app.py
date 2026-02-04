@@ -40,8 +40,16 @@ def _get_openai_key() -> str:
 def _get_gemini_key() -> str:
     try:
         s = getattr(st, "secrets", None)
-        if s and "GEMINI_API_KEY" in s:
-            return (s.get("GEMINI_API_KEY") or "").strip()
+        if s:
+            # Top-level (Streamlit Cloud often uses this)
+            key = s.get("GEMINI_API_KEY")
+            if key and isinstance(key, str):
+                return key.strip()
+            # Nested (e.g. [api_keys] section in TOML)
+            for section in ("api_keys", "secrets", "default"):
+                sub = s.get(section) if isinstance(s.get(section), dict) else None
+                if sub and sub.get("GEMINI_API_KEY"):
+                    return str(sub["GEMINI_API_KEY"]).strip()
     except Exception:
         pass
     return (os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key") or "") or ""
@@ -1249,22 +1257,19 @@ def generate_hypothesis(research_data: dict, use_demo: bool = False) -> str:
         return generate_hypothesis_with_ai(prompt, provider)
     except Exception as e:
         error_msg = str(e)
-        # Check for quota/rate limit errors
         if "QUOTA_EXCEEDED" in error_msg or "RATE_LIMIT" in error_msg:
-            st.warning(f"⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode. You can test the full app flow without an API key.")
+            st.warning(f"⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode.")
             return generate_demo_hypothesis(research_data)
-        # Try switching providers if one fails
+        # Show actual error so user can see invalid key, permission, etc.
+        st.error(f"⚠️ **API Error**: {error_msg[:500]}")
+        st.info("Switching to demo mode. If this is an auth/key error, check Streamlit Secrets (GEMINI_API_KEY) and redeploy.")
         if provider == "openai":
-            st.info("🔄 OpenAI failed, trying Gemini...")
             try:
                 st.session_state.ai_provider = "gemini"
                 return generate_hypothesis_with_ai(prompt, "gemini")
             except:
-                st.warning("⚠️ Both providers failed. Switching to demo mode.")
                 return generate_demo_hypothesis(research_data)
-        else:
-            st.warning("⚠️ **API Error**: Switching to demo mode.")
-            return generate_demo_hypothesis(research_data)
+        return generate_demo_hypothesis(research_data)
 
 
 def extract_personas_from_hypothesis(hypothesis: str) -> list:
@@ -1429,11 +1434,12 @@ No specific prospect—use placeholders so this sequence can scale:
             return response.choices[0].message.content
     except Exception as e:
         error_msg = str(e)
-        # Check for quota/rate limit errors
-        if "quota" in error_msg.lower() or "insufficient" in error_msg.lower() or "429" in error_msg or "RATE_LIMIT" in str(e):
-            st.warning("⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode. You can test the full app flow without an API key.")
+        is_quota = "quota" in error_msg.lower() or "insufficient" in error_msg.lower() or "429" in error_msg or "RATE_LIMIT" in str(e) or "resource_exhausted" in error_msg.lower()
+        if is_quota:
+            st.warning("⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode.")
             return generate_demo_sequence(lane, hypothesis, prospect_info)
-        # Try switching providers if one fails
+        st.error(f"⚠️ **API Error**: {error_msg[:500]}")
+        st.info("Switching to demo mode. If this is an auth/key error, check Streamlit Secrets (GEMINI_API_KEY) and redeploy.")
         if provider == "openai":
             st.info("🔄 OpenAI failed, trying Gemini...")
             try:
