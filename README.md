@@ -53,16 +53,17 @@ outbound-engine/
 ### Step 1: Input Research
 Paste your research into the input fields:
 - Company overview (from website, Crunchbase, etc.)
-- Relevant job postings (1-2)
-- Target persona LinkedIn profiles (1-2)
+- Relevant job postings (3–5+ recommended for better outputs)
+- Target persona LinkedIn profiles (3–5+ recommended for better outputs)
 - Recent news or signals
 
 ### Step 2: Generate Hypothesis
 Click "Generate Hypothesis" to get AI-powered analysis:
 - Why this account is a good fit
 - Why now is the right time
-- Who to target (2-3 personas)
-- Multi-threading strategy
+- Proof points / evidence to cite (with links where possible)
+- Tech stack (from research)
+- Risks / why we might lose
 
 ### Step 3: Build Sequences
 Select a persona and generate:

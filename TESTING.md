@@ -154,8 +154,9 @@ If it doesn't open automatically, you'll see a URL in the terminal - click it or
 - ✅ Specific references to your input data (not generic)
 - ✅ Clear "Why This Account" with company fit analysis
 - ✅ "Why Now" tied to actual signals you provided
-- ✅ 2-3 specific personas with reasoning
-- ✅ Multi-threading strategy that makes sense
+- ✅ Proof points / evidence to cite (with links where possible)
+- ✅ Tech stack (or "Not specified in research" if absent)
+- ✅ Risks / why we might lose (3–5 factors)
 
 ### Sequence Should Include:
 - ✅ 8 touchpoints matching the template structure

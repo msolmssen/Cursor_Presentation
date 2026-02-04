@@ -20,8 +20,11 @@ except ImportError:
     GEMINI_AVAILABLE = False
     genai = None
 
-# Load environment variables
+# Load environment variables (.env first, then local_secrets.env for saved API keys)
 load_dotenv()
+_secrets_path = Path(__file__).parent / "local_secrets.env"
+if _secrets_path.exists():
+    load_dotenv(_secrets_path)
 
 # Configure page
 st.set_page_config(
@@ -29,6 +32,727 @@ st.set_page_config(
     page_icon="🎯",
     layout="wide"
 )
+
+# Inject warm color scheme CSS
+def inject_warm_styles():
+    """Inject warm, dynamic CSS styling for a more inviting UI."""
+    st.markdown("""
+    <style>
+    /* Dark theme color scheme */
+    :root {
+        --dark-bg: #1A1A1A;
+        --dark-bg-secondary: #242424;
+        --dark-bg-tertiary: #2D2D2D;
+        --dark-primary: #5B9BD5;
+        --dark-primary-dark: #4A8BC2;
+        --dark-accent: #FF6B6B;
+        --dark-accent-warm: #FF8C69;
+        --dark-text: #D0D0D0;
+        --dark-text-light: #B0B0B0;
+        --dark-text-muted: #888888;
+        --dark-border: #3A3A3A;
+        --dark-border-light: #4A4A4A;
+        --dark-shadow: rgba(0, 0, 0, 0.4);
+        --dark-shadow-light: rgba(0, 0, 0, 0.2);
+        --dark-card: #252525;
+        --dark-card-hover: #2D2D2D;
+    }
+    
+    /* Main background - dark gradient */
+    .stApp {
+        background: linear-gradient(135deg, #1A1A1A 0%, #242424 50%, #2D2D2D 100%);
+        min-height: 100vh;
+        color: var(--dark-text);
+    }
+    
+    /* Sidebar styling - dark theme */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #252525 0%, #1F1F1F 100%);
+        border-right: 2px solid var(--dark-border);
+        box-shadow: 2px 0 12px var(--dark-shadow);
+        color: var(--dark-text);
+        padding: 0.5rem 0.5rem 0.75rem 0.5rem !important;
+    }
+    
+    /* Remove top spacing from sidebar content */
+    [data-testid="stSidebar"] > div:first-child,
+    [data-testid="stSidebar"] .css-1d391kg,
+    [data-testid="stSidebar"] > div > div:first-child {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
+    
+    /* Remove top margin from first element in sidebar */
+    [data-testid="stSidebar"] .element-container:first-child,
+    [data-testid="stSidebar"] .stMarkdown:first-child {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+    
+    /* Remove top spacing from first heading */
+    [data-testid="stSidebar"] h3:first-of-type {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+    
+    /* Reduce spacing in sidebar sections */
+    [data-testid="stSidebar"] .stMarkdown {
+        margin-bottom: 0.25rem !important;
+        margin-top: 0.25rem !important;
+    }
+    
+    [data-testid="stSidebar"] .stMarkdown p {
+        margin-bottom: 0.5rem !important;
+        margin-top: 0.25rem !important;
+    }
+    
+    [data-testid="stSidebar"] .stMarkdown h3 {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.25rem !important;
+        padding-bottom: 0.25rem !important;
+    }
+    
+    [data-testid="stSidebar"] .element-container {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    [data-testid="stSidebar"] hr {
+        margin: 0.5rem 0 !important;
+        border-width: 1px !important;
+    }
+    
+    /* Reduce spacing between buttons */
+    [data-testid="stSidebar"] .stButton {
+        margin-bottom: 0.25rem !important;
+    }
+    
+    /* Reduce spacing for status badges */
+    [data-testid="stSidebar"] .status-badge {
+        margin: 0.15rem !important;
+    }
+    
+    /* Compact checkbox and radio spacing */
+    [data-testid="stSidebar"] .stCheckbox,
+    [data-testid="stSidebar"] .stRadio {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* Reduce spacing for text inputs */
+    [data-testid="stSidebar"] .stTextInput {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* Reduce spacing for info boxes */
+    [data-testid="stSidebar"] .stInfo,
+    [data-testid="stSidebar"] .stSuccess,
+    [data-testid="stSidebar"] .stWarning,
+    [data-testid="stSidebar"] .stError {
+        margin-bottom: 0.5rem !important;
+        padding: 0.5rem !important;
+    }
+    
+    /* Main content area - dark card background */
+    .main .block-container {
+        background: linear-gradient(135deg, rgba(37, 37, 37, 0.95) 0%, rgba(30, 30, 30, 0.95) 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px var(--dark-shadow);
+        margin-top: 1rem;
+        border: 1px solid var(--dark-border);
+        color: var(--dark-text);
+    }
+    
+    /* Headers */
+    h1 {
+        color: var(--dark-text) !important;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    h2, h3 {
+        color: var(--dark-text) !important;
+        font-weight: 600;
+    }
+    
+    /* Ensure all headings have good contrast */
+    h3 {
+        color: var(--dark-text) !important;
+        opacity: 1 !important;
+    }
+    
+    /* Fix any markdown headings that might have low contrast */
+    .stMarkdown h3,
+    .main h3 {
+        color: var(--dark-text) !important;
+    }
+    
+    /* Buttons - primary */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, var(--dark-primary) 0%, var(--dark-primary-dark) 100%);
+        color: #E0E0E0;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(91, 155, 213, 0.3);
+    }
+    
+    .stButton > button[kind="primary"]:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(91, 155, 213, 0.4);
+        background: linear-gradient(135deg, #6BA5D8 0%, #5B9BD5 100%);
+        color: #E8E8E8;
+    }
+    
+    /* Buttons - secondary (including refresh button) */
+    .stButton > button:not([kind="primary"]),
+    button[kind="secondary"],
+    .stButton button {
+        background: linear-gradient(135deg, #2D2D2D 0%, #252525 100%) !important;
+        color: var(--dark-text) !important;
+        border: 1.5px solid var(--dark-border) !important;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px var(--dark-shadow-light);
+    }
+    
+    .stButton > button:not([kind="primary"]):hover,
+    button[kind="secondary"]:hover,
+    .stButton button:hover {
+        background: linear-gradient(135deg, #353535 0%, #2D2D2D 100%) !important;
+        border-color: var(--dark-primary) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px var(--dark-shadow);
+        color: var(--dark-text) !important;
+    }
+    
+    /* Text inputs and text areas */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        background: #2D2D2D;
+        border: 1.5px solid var(--dark-border);
+        border-radius: 8px;
+        padding: 0.5rem;
+        transition: all 0.3s ease;
+        box-shadow: inset 0 2px 4px var(--dark-shadow);
+        color: var(--dark-text);
+        caret-color: var(--dark-primary);
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        background: #333333;
+        border-color: var(--dark-primary);
+        box-shadow: 0 0 0 3px rgba(91, 155, 213, 0.2), inset 0 2px 4px var(--dark-shadow);
+        color: var(--dark-text);
+        caret-color: var(--dark-primary);
+    }
+    
+    /* Ensure text cursor (caret) is visible in all inputs and textareas */
+    input[type="text"],
+    input[type="password"],
+    textarea {
+        caret-color: #5B9BD5 !important;
+    }
+    
+    .stTextInput > div > div > input::placeholder,
+    .stTextArea > div > div > textarea::placeholder {
+        color: var(--dark-text-muted);
+    }
+    
+    /* Select boxes */
+    .stSelectbox > div > div > select {
+        background: #2D2D2D;
+        border: 1.5px solid var(--dark-border);
+        border-radius: 8px;
+        box-shadow: inset 0 2px 4px var(--dark-shadow);
+        color: var(--dark-text);
+    }
+    
+    /* Info boxes and alerts */
+    .stInfo {
+        background-color: rgba(91, 155, 213, 0.15);
+        border-left: 4px solid var(--dark-primary);
+        border-radius: 6px;
+        color: var(--dark-text);
+    }
+    
+    .stSuccess {
+        background-color: rgba(46, 204, 113, 0.15);
+        border-left: 4px solid #2ECC71;
+        border-radius: 6px;
+        color: var(--dark-text);
+    }
+    
+    .stWarning {
+        background-color: rgba(255, 193, 7, 0.15);
+        border-left: 4px solid #FFC107;
+        border-radius: 6px;
+        color: var(--dark-text);
+    }
+    
+    .stError {
+        background-color: rgba(231, 76, 60, 0.15);
+        border-left: 4px solid #E74C3C;
+        border-radius: 6px;
+        color: var(--dark-text);
+    }
+    
+    /* Radio buttons and checkboxes */
+    .stRadio > div,
+    .stCheckbox > div {
+        background: linear-gradient(135deg, #2D2D2D 0%, #252525 100%);
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--dark-border);
+        box-shadow: 0 2px 4px var(--dark-shadow-light);
+        color: var(--dark-text);
+    }
+    
+    .stRadio > div > label,
+    .stCheckbox > div > label {
+        color: var(--dark-text);
+    }
+    
+    /* Dividers */
+    hr {
+        border-color: var(--dark-border);
+        margin: 1.5rem 0;
+    }
+    
+    /* Markdown content */
+    .stMarkdown {
+        color: var(--dark-text);
+        line-height: 1.6;
+    }
+    
+    .stMarkdown p {
+        color: var(--dark-text);
+    }
+    
+    .stMarkdown code {
+        background: #1F1F1F;
+        color: var(--dark-accent);
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+    }
+    
+    /* Dataframes */
+    .stDataFrame {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px var(--dark-shadow);
+        background: #2D2D2D;
+    }
+    
+    .stDataFrame table {
+        background: #2D2D2D;
+        color: var(--dark-text);
+    }
+    
+    .stDataFrame th {
+        background: #1F1F1F;
+        color: var(--dark-text);
+    }
+    
+    .stDataFrame td {
+        background: #2D2D2D;
+        color: var(--dark-text);
+        border-color: var(--dark-border);
+    }
+    
+    /* Sidebar buttons */
+    [data-testid="stSidebar"] .stButton > button {
+        background: linear-gradient(135deg, #2D2D2D 0%, #252525 100%);
+        border: 1.5px solid var(--dark-border);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px var(--dark-shadow-light);
+        color: var(--dark-text);
+    }
+    
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: linear-gradient(135deg, #353535 0%, #2D2D2D 100%);
+        border-color: var(--dark-primary);
+        box-shadow: 0 4px 8px var(--dark-shadow);
+        transform: translateX(2px);
+        color: var(--dark-text);
+    }
+    
+    /* Spinner */
+    .stSpinner > div {
+        border-color: var(--dark-primary) transparent transparent transparent;
+    }
+    
+    /* Badges and Status Indicators */
+    .status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin: 0.25rem;
+    }
+    
+    .badge-demo {
+        background: linear-gradient(135deg, #4A3A3A 0%, #3A2A2A 100%);
+        color: var(--dark-text-light);
+        box-shadow: 0 2px 4px var(--dark-shadow);
+        border: 1px solid var(--dark-border);
+    }
+    
+    .badge-ai {
+        background: linear-gradient(135deg, #3A4A5A 0%, #2A3A4A 100%);
+        color: var(--dark-text-light);
+        box-shadow: 0 2px 4px var(--dark-shadow);
+        border: 1px solid var(--dark-border-light);
+    }
+    
+    .badge-connected {
+        background: linear-gradient(135deg, #2A4A3A 0%, #1A3A2A 100%);
+        color: var(--dark-text-light);
+        box-shadow: 0 2px 4px var(--dark-shadow);
+        border: 1px solid var(--dark-border-light);
+    }
+    
+    .badge-disconnected {
+        background: #3A3A3A;
+        color: var(--dark-text-muted);
+        border: 1px solid var(--dark-border);
+    }
+    
+    /* Breadcrumb Navigation */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        padding: 0.75rem 1rem;
+        background: linear-gradient(135deg, #2D2D2D 0%, #252525 100%);
+        border-radius: 8px;
+        border: 1px solid var(--dark-border);
+        box-shadow: 0 2px 8px var(--dark-shadow);
+    }
+    
+    .breadcrumb-item {
+        color: var(--dark-text-light);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .breadcrumb-item.active {
+        color: var(--dark-primary);
+        font-weight: 600;
+    }
+    
+    .breadcrumb-separator {
+        color: var(--dark-border-light);
+        margin: 0 0.25rem;
+    }
+    
+    /* Step Indicator */
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 1.5rem 0;
+        padding: 1rem;
+        background: linear-gradient(135deg, #2D2D2D 0%, #252525 100%);
+        border-radius: 12px;
+        border: 1px solid var(--dark-border);
+        box-shadow: 0 2px 12px var(--dark-shadow);
+    }
+    
+    .step-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+    
+    .step-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 1.25rem;
+        left: 60%;
+        width: 80%;
+        height: 2px;
+        background: var(--dark-border);
+        z-index: 0;
+    }
+    
+    .step-item.completed:not(:last-child)::after {
+        background: var(--dark-primary);
+    }
+    
+    .step-number {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+        background: linear-gradient(135deg, #2D2D2D 0%, #252525 100%);
+        border: 2px solid var(--dark-border);
+        color: var(--dark-text-light);
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px var(--dark-shadow);
+    }
+    
+    .step-item.active .step-number {
+        background: linear-gradient(135deg, #3A5A7A 0%, #2A4A6A 100%);
+        color: var(--dark-text-light);
+        border-color: var(--dark-primary);
+        box-shadow: 0 2px 8px var(--dark-shadow);
+        transform: scale(1.1);
+    }
+    
+    .step-item.completed .step-number {
+        background: linear-gradient(135deg, #2A5A4A 0%, #1A4A3A 100%);
+        color: var(--dark-text-light);
+        border-color: var(--dark-border-light);
+    }
+    
+    .step-label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--dark-text-light);
+        text-align: center;
+    }
+    
+    .step-item.active .step-label {
+        color: var(--dark-primary);
+        font-weight: 600;
+    }
+    
+    /* Enhanced Typography */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        letter-spacing: -0.01em;
+    }
+    
+    h1 {
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+    }
+    
+    h2, h3 {
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+    }
+    
+    p {
+        line-height: 1.7;
+        color: var(--dark-text);
+    }
+    
+    /* Card/Container Styling */
+    .content-card {
+        background: linear-gradient(135deg, #2D2D2D 0%, #252525 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--dark-border);
+        box-shadow: 0 2px 12px var(--dark-shadow);
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+        color: var(--dark-text);
+    }
+    
+    .content-card:hover {
+        background: linear-gradient(135deg, #353535 0%, #2D2D2D 100%);
+        box-shadow: 0 4px 20px var(--dark-shadow);
+        transform: translateY(-2px);
+        border-color: var(--dark-primary);
+    }
+    
+    /* Enhanced Input Groups */
+    .input-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .input-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--dark-text);
+        font-size: 0.95rem;
+    }
+    
+    /* Loading States */
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+    }
+    
+    .loading {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    /* Success Animation */
+    @keyframes successPop {
+        0% {
+            transform: scale(0.8);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1.05);
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    
+    .success-animation {
+        animation: successPop 0.4s ease-out;
+    }
+    
+    /* Enhanced Spacing */
+    .section-spacing {
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Text Area Enhancements */
+    .stTextArea > div > div > textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    /* Enhanced Selectbox */
+    .stSelectbox > div > div > select {
+        cursor: pointer;
+    }
+    
+    /* Tooltip Enhancements */
+    [data-testid="stTooltipIcon"] {
+        color: var(--dark-primary);
+    }
+    
+    /* Sidebar Enhancements */
+    [data-testid="stSidebar"] .stMarkdown h3 {
+        margin-top: 1rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--dark-border);
+        color: var(--dark-text);
+    }
+    
+    [data-testid="stSidebar"] .stMarkdown {
+        color: var(--dark-text);
+    }
+    
+    /* Enhanced Radio Buttons */
+    .stRadio > div > label {
+        padding: 0.5rem;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        color: var(--dark-text);
+    }
+    
+    .stRadio > div > label:hover {
+        background: linear-gradient(135deg, #353535 0%, #2D2D2D 100%);
+    }
+    
+    /* Enhanced Checkbox */
+    .stCheckbox > label {
+        font-weight: 500;
+        color: var(--dark-text);
+    }
+    
+    /* Smooth Transitions */
+    * {
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    
+    /* Focus States */
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
+        outline: 2px solid var(--dark-primary);
+        outline-offset: 2px;
+    }
+    
+    /* Streamlit default element overrides for dark theme */
+    .stSelectbox label,
+    .stTextInput label,
+    .stTextArea label {
+        color: var(--dark-text);
+    }
+    
+    /* Code blocks */
+    pre {
+        background: #1F1F1F !important;
+        color: var(--dark-text) !important;
+        border: 1px solid var(--dark-border);
+    }
+    
+    code {
+        background: #1F1F1F;
+        color: var(--dark-accent);
+    }
+    
+    /* Streamlit header/deploy bar - dark theme */
+    header[data-testid="stHeader"],
+    .stApp > header {
+        background: linear-gradient(135deg, #252525 0%, #1F1F1F 100%) !important;
+        border-bottom: 1px solid var(--dark-border) !important;
+    }
+    
+    header[data-testid="stHeader"] > div,
+    .stApp > header > div {
+        background: transparent !important;
+    }
+    
+    header[data-testid="stHeader"] button,
+    header[data-testid="stHeader"] a,
+    .stApp > header button,
+    .stApp > header a {
+        color: var(--dark-text-light) !important;
+    }
+    
+    header[data-testid="stHeader"] button:hover,
+    header[data-testid="stHeader"] a:hover,
+    .stApp > header button:hover,
+    .stApp > header a:hover {
+        color: var(--dark-text) !important;
+    }
+    
+    /* Hide or style the deploy button area */
+    #MainMenu,
+    [data-testid="stHeader"] {
+        visibility: visible;
+        background: linear-gradient(135deg, #252525 0%, #1F1F1F 100%) !important;
+    }
+    
+    /* Style the hamburger menu */
+    button[title="View app source"],
+    button[title="Get help"],
+    button[title="Deploy"],
+    [data-testid="stHeader"] button {
+        background: transparent !important;
+        color: var(--dark-text-light) !important;
+    }
+    
+    [data-testid="stHeader"] button:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: var(--dark-text) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# Inject styles on app load
+inject_warm_styles()
 
 # Initialize session state
 if "page" not in st.session_state:
@@ -43,8 +767,16 @@ if "selected_persona" not in st.session_state:
     st.session_state.selected_persona = None
 if "sequence" not in st.session_state:
     st.session_state.sequence = None
+if "sequences" not in st.session_state:
+    st.session_state.sequences = {}  # lane_id -> content (scalable sequences by persona lane)
+if "selected_lanes" not in st.session_state:
+    st.session_state.selected_lanes = []  # list of lane ids user chose (1-3)
+if "current_sequence_lane_id" not in st.session_state:
+    st.session_state.current_sequence_lane_id = None  # which lane's sequence is displayed
 if "prospect_info" not in st.session_state:
     st.session_state.prospect_info = {}
+if "ae_handoff" not in st.session_state:
+    st.session_state.ae_handoff = None
 
 
 def get_openai_client():
@@ -116,7 +848,7 @@ def get_gemini_client():
 
 def get_ai_provider():
     """Get the selected AI provider from session state."""
-    return st.session_state.get("ai_provider", "openai")  # Default to OpenAI
+    return st.session_state.get("ai_provider", "gemini")  # Default to Gemini
 
 
 def generate_demo_hypothesis(research_data: dict) -> str:
@@ -179,118 +911,39 @@ Several timely signals create urgency for outreach:
 
 ---
 
-## Who to Target
-
-### 1. VP/Director of Engineering
-**Why They Care:**
-- Accountable for engineering output and delivery velocity
-- Budget authority for developer tools
-- Feeling pressure to scale teams efficiently
-
-**Pain Points:**
-- Teams not shipping fast enough to meet business demands
-- Difficulty justifying headcount growth
-- Developer retention and burnout concerns
-
-**Anticipated Objections:**
-- "We already have GitHub Copilot" → Position Cursor as codebase-aware upgrade
-- "Need to see ROI first" → Offer pilot with measurable metrics
-- "Developers should decide" → Enable evaluation while providing structure
-
-### 2. Platform/DevEx Engineering Lead
-**Why They Care:**
-- Owns developer productivity and tooling
-- Tasked with improving developer experience
-- Influences tool adoption decisions
-
-**Pain Points:**
-- Low adoption of existing developer tools
-- Developers complaining about productivity blockers
-- Difficulty measuring tooling impact
-
-**Anticipated Objections:**
-- "Building our own tools" → Highlight time-to-value and focus on core product
-- "How do we measure impact?" → Provide evaluation framework
-- "Security review concerns" → Share SOC 2 certs and privacy mode details
-
-### 3. CTO / Chief Technology Officer
-**Why They Care:**
-- Sets technical strategy and vision
-- Accountable for engineering ROI
-- Cares about competitive advantage
-
-**Pain Points:**
-- Engineering costs growing faster than output
-- Competitors shipping faster
-- Board pressure on efficiency
-
-**Anticipated Objections:**
-- "Is this mature enough for enterprise?" → Share customer references and certifications
-- "What's the vendor risk?" → Discuss company stability and roadmap
-- "How does this fit our AI strategy?" → Position as strategic AI investment
+## Proof Points / Evidence to Cite
+- Relevant job postings (e.g. Platform Engineering, DevEx roles) — include URL if pasted in research
+- Engineering headcount or scale indicators from research
+- Recent funding, product launch, or conference mentions — include URL/source if in research
+- Any specific stats or quotes from the research (e.g. "300+ apps", "1B uses")
 
 ---
 
-## Multi-Threading Strategy
+## Tech Stack
+- List any languages, frameworks, infrastructure, or tools mentioned in the research
+- If not specified: "Not specified in research"
 
-### Phase 1: Technical Champion (Week 1)
-**Start with:** Platform/DevEx Engineering Lead
-- They're most likely to understand the value immediately
-- Can become internal advocate
-- Lower barrier to initial conversation
+---
 
-**Approach:**
-- Reference specific job posting or team formation
-- Focus on developer experience and productivity metrics
-- Offer developer trial access
-
-### Phase 2: Engineering Leadership (Week 2)
-**Engage:** VP/Director of Engineering
-- Reference technical champion's interest
-- Connect to scaling and velocity challenges
-- Discuss structured evaluation approach
-
-**Approach:**
-- Multi-thread with technical champion's support
-- Present ROI framework and pilot structure
-- Address budget and procurement questions
-
-### Phase 3: Executive Alignment (Week 3)
-**Involve:** CTO (if evaluation is serious)
-- Bring in when there's genuine evaluation interest
-- Strategic positioning and competitive advantage
-- Address enterprise concerns
-
-**Approach:**
-- Reference team-level evaluation progress
-- Discuss strategic AI investment angle
-- Share customer success stories at similar scale
-
-### Recommended Cadence
-- **Week 1:** Initial outreach to technical champion (email + LinkedIn)
-- **Week 2:** Follow-up with engineering leadership (email + phone)
-- **Week 3:** Executive touchpoint if evaluation progressing (email)
-- **Ongoing:** Multi-channel touchpoints every 2-3 days within each week
-
-### Key Success Factors
-1. **Front-load personalization** - Use specific signals from research
-2. **Create internal momentum** - Get technical champion excited first
-3. **Structure the evaluation** - Provide framework and metrics
-4. **Address security early** - Proactively share compliance info if needed
+## Risks / Why We Might Lose
+- Existing AI coding tool commitment (name a specific competitor only if the research indicates which one)
+- Budget or timing constraints
+- Other disqualifiers suggested by the research (avoid generic "lengthy enterprise security review")
 """
     
     return hypothesis
 
 
-def generate_demo_sequence(persona: str, hypothesis: str, prospect_info: dict) -> str:
-    """Generate a realistic demo sequence without API calls."""
-    first_name = prospect_info.get('first_name', 'John')
-    company = prospect_info.get('company', 'Acme Corp')
+def generate_demo_sequence(lane: dict, hypothesis: str, prospect_info: dict) -> str:
+    """Generate a realistic demo sequence without API calls. lane = dict with id, name, example_titles, hook, cursor_play, peer_pivot."""
+    first_name = prospect_info.get('first_name') or '[First Name]'
+    company = prospect_info.get('company') or '[Company]'
+    lane_name = lane.get("name", "Internal Tool Owners")
     
-    sequence = f"""# Outbound Sequence for {first_name} - {company}
+    sequence = f"""# Outbound Sequence — {lane_name}
 
 ## Sequence Overview
-**Target Persona:** {persona}
+**Persona lane:** {lane_name}
 **Total Steps:** 8
 **Duration:** 14 days
 **Channels:** Email, LinkedIn, Phone
@@ -445,6 +1098,56 @@ def load_file(filepath: str) -> str:
     return ""
 
 
+def load_kb_files() -> dict:
+    """Load knowledge base files if they exist."""
+    kb_files = {
+        "cursor_encyclopedia": "kb/cursor_encyclopedia.md",
+        "voice": "kb/voice.md",
+        "offers": "kb/offers.md",
+        "sequence_patterns": "kb/sequence_patterns.md",
+        "personalization": "kb/personalization_playbook.md"
+    }
+    
+    kb_content = {}
+    for key, filepath in kb_files.items():
+        content = load_file(filepath)
+        if content:
+            kb_content[key] = content
+    
+    return kb_content
+
+
+def load_persona_lanes() -> list:
+    """Load and parse persona lanes from kb/persona_lanes.md. Returns list of dicts with id, name, example_titles, hook, cursor_play, peer_pivot (optional)."""
+    content = load_file("kb/persona_lanes.md")
+    if not content:
+        return []
+    lanes = []
+    # Split by ## N. (e.g. ## 1. Big Picture Leaders)
+    blocks = re.split(r"\n##\s+(\d+)\.\s+", content)[1:]  # skip intro before first ##
+    for i in range(0, len(blocks), 2):
+        if i + 1 >= len(blocks):
+            break
+        num, rest = blocks[i], blocks[i + 1]
+        name_line = rest.split("\n")[0].strip()
+        name = name_line.split("**")[0].strip() or name_line
+        text = rest
+
+        def _extract(label: str) -> str:
+            m = re.search(r"\*\*" + re.escape(label) + r"\*\*[:\s]*(.*?)(?=\n\*\*|\n---|\Z)", text, re.DOTALL)
+            return m.group(1).strip() if m else ""
+
+        lanes.append({
+            "id": num,
+            "name": name,
+            "example_titles": _extract("Example titles"),
+            "hook": _extract("Hook"),
+            "cursor_play": _extract("Cursor play"),
+            "peer_pivot": _extract("Peer pivot") or ""
+        })
+    return lanes
+
+
 def generate_hypothesis_with_ai(prompt: str, provider: str) -> str:
     """Generate text using the specified AI provider."""
     if provider == "gemini":
@@ -456,7 +1159,7 @@ def generate_hypothesis_with_ai(prompt: str, provider: str) -> str:
                 prompt,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.7,
-                    max_output_tokens=2000,
+                    max_output_tokens=6144,
                 )
             )
             return response.text
@@ -474,11 +1177,11 @@ def generate_hypothesis_with_ai(prompt: str, provider: str) -> str:
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": "You are an expert B2B sales strategist. Generate actionable, specific outbound hypotheses based on account research."},
+                    {"role": "system", "content": "You are an expert B2B sales strategist. Generate a complete, actionable outbound hypothesis. Always finish every section and sentence—do not stop mid-sentence or omit sections. You MUST include all five sections including Tech Stack and Risks."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=2000
+                max_tokens=6144
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -501,6 +1204,9 @@ def generate_hypothesis(research_data: dict, use_demo: bool = False) -> str:
     cursor_context = load_file("prompts/cursor_context.md")
     hypothesis_template = load_file("prompts/hypothesis.md")
     
+    # Load knowledge base files (for personalization guidance)
+    kb_content = load_kb_files()
+    
     # Build the prompt
     prompt = hypothesis_template.replace("{{company_info}}", research_data.get("company_info", "Not provided"))
     prompt = prompt.replace("{{job_postings}}", research_data.get("job_postings", "Not provided"))
@@ -508,9 +1214,15 @@ def generate_hypothesis(research_data: dict, use_demo: bool = False) -> str:
     prompt = prompt.replace("{{news_signals}}", research_data.get("news_signals", "Not provided"))
     prompt = prompt.replace("{{cursor_context}}", cursor_context)
     
+    # Inject KB content if available (Cursor encyclopedia + personalization for hypothesis quality)
+    if kb_content.get("cursor_encyclopedia"):
+        prompt += "\n\n## Cursor Technical & Competitive Context\n\n" + kb_content["cursor_encyclopedia"] + "\n\n"
+    if kb_content.get("personalization"):
+        prompt += "\n\n## Personalization Guidelines\n\n" + kb_content["personalization"] + "\n\n"
+    
     # Add system context for Gemini (which doesn't have separate system messages)
     if provider == "gemini":
-        prompt = f"You are an expert B2B sales strategist. Generate actionable, specific outbound hypotheses based on account research.\n\n{prompt}"
+        prompt = f"You are an expert B2B sales strategist. Generate a complete, actionable outbound hypothesis. Always finish every section and sentence—do not stop mid-sentence or omit sections. You MUST include all five sections including Tech Stack and Risks.\n\n{prompt}"
     
     try:
         return generate_hypothesis_with_ai(prompt, provider)
@@ -590,11 +1302,11 @@ def extract_personas_from_hypothesis(hypothesis: str) -> list:
     return personas if personas else ["VP/Director of Engineering", "Platform/DevEx Engineering Lead", "CTO"]
 
 
-def generate_sequence(persona: str, hypothesis: str, prospect_info: dict, use_demo: bool = False) -> str:
-    """Generate outbound sequence for a specific persona."""
+def generate_sequence(lane: dict, hypothesis: str, prospect_info: dict, use_demo: bool = False, reference_customers: str = "") -> str:
+    """Generate outbound sequence for a persona lane (scalable across prospects). lane = dict with id, name, example_titles, hook, cursor_play, peer_pivot. reference_customers = optional list of current customers to cite in 1-2 steps."""
     # Check if demo mode is enabled
     if use_demo or st.session_state.get("demo_mode", False):
-        return generate_demo_sequence(persona, hypothesis, prospect_info)
+        return generate_demo_sequence(lane, hypothesis, prospect_info)
     
     provider = get_ai_provider()
     
@@ -603,24 +1315,69 @@ def generate_sequence(persona: str, hypothesis: str, prospect_info: dict, use_de
     sequence_template = load_file("prompts/sequence.md")
     sequence_structure = load_file("templates/sequence_structure.md")
     
-    # Build prospect context
-    prospect_context = f"""
-Prospect Information:
-- Name: {prospect_info.get('first_name', 'Unknown')} {prospect_info.get('last_name', '')}
-- Title: {prospect_info.get('title', persona)}
-- Company: {prospect_info.get('company', 'Unknown Company')}
-- Email: {prospect_info.get('email', 'unknown@company.com')}
+    # Load knowledge base files
+    kb_content = load_kb_files()
+    
+    # Build prospect context: use placeholders if no prospect provided
+    has_prospect = prospect_info.get("first_name") and prospect_info.get("company")
+    if has_prospect:
+        prospect_context = f"""
+Prospect (for this draft):
+- Name: {prospect_info.get('first_name', '')} {prospect_info.get('last_name', '').strip() or ''}
+- Title: {prospect_info.get('title', lane.get('name', ''))}
+- Company: {prospect_info.get('company', '')}
+- Email: {prospect_info.get('email', '') or 'unknown@company.com'}
+"""
+    else:
+        prospect_context = """
+No specific prospect—use placeholders so this sequence can scale:
+- Use [First Name] where you would use their first name
+- Use [Company] where you would use their company name
+- Keep tone and messaging tailored to this persona lane; they can fill in details when they use it
 """
     
+    peer_pivot_block = ""
+    if lane.get("peer_pivot"):
+        peer_pivot_block = "\n**Peer pivot (optional):** " + lane["peer_pivot"]
+    
     # Build the prompt
-    prompt = sequence_template.replace("{{persona}}", f"{persona}\n\n{prospect_context}")
+    prompt = sequence_template.replace("{{persona_lane_name}}", lane.get("name", ""))
+    prompt = prompt.replace("{{persona_lane_titles}}", lane.get("example_titles", ""))
+    prompt = prompt.replace("{{persona_lane_hook}}", lane.get("hook", ""))
+    prompt = prompt.replace("{{persona_lane_play}}", lane.get("cursor_play", ""))
+    prompt = prompt.replace("{{persona_lane_peer_pivot}}", peer_pivot_block)
+    prompt = prompt.replace("{{prospect_context}}", prospect_context)
     prompt = prompt.replace("{{hypothesis}}", hypothesis)
+    # Reference customers: from Research Input, or from kb/reference_customers.md if field empty
+    ref_customers = (reference_customers or "").strip()
+    if not ref_customers:
+        ref_customers = (load_file("kb/reference_customers.md") or "").strip()
+    ref_block = ref_customers if ref_customers else "None provided—do not add customer references to the sequence."
+    prompt = prompt.replace("{{reference_customers}}", ref_block)
     prompt = prompt.replace("{{sequence_template}}", sequence_structure)
     prompt = prompt.replace("{{cursor_context}}", cursor_context)
     
+    # Inject knowledge base content if available
+    kb_section = ""
+    if kb_content:
+        kb_section = "\n\n## Knowledge Base & Style Guide\n\n"
+        if "cursor_encyclopedia" in kb_content:
+            kb_section += "### Cursor Technical & Competitive Encyclopedia\n" + kb_content["cursor_encyclopedia"] + "\n\n"
+        if "voice" in kb_content:
+            kb_section += "### Voice & Style Guide\n" + kb_content["voice"] + "\n\n"
+        if "offers" in kb_content:
+            kb_section += "### Offer Library\n" + kb_content["offers"] + "\n\n"
+        if "sequence_patterns" in kb_content:
+            kb_section += "### Sequence Patterns\n" + kb_content["sequence_patterns"] + "\n\n"
+        if "personalization" in kb_content:
+            kb_section += "### Personalization Playbook\n" + kb_content["personalization"] + "\n\n"
+        kb_section += "---\n\n**CRITICAL**: The content above (Cursor encyclopedia, voice, offers, sequence patterns, personalization) is the PRIMARY source for wording, Cursor-specific claims, and style. Use it exactly. The persona lane (hook / Cursor play) only orients the angle for this audience—it must not override or replace the sharper messaging in this KB. Every email and LinkedIn message must end with a CTA (question preferred). Vary openers—do not use the same opener phrase more than once in the sequence.\n\n"
+    
+    prompt = prompt + kb_section
+    
     # Add system context for Gemini
     if provider == "gemini":
-        prompt = f"You are an expert B2B sales copywriter. Generate compelling, personalized outbound sequences for developer tools.\n\n{prompt}"
+        prompt = f"You are an expert B2B sales copywriter. Generate the COMPLETE outbound sequence. You MUST include every step through Day 15 breakup (core) and Day 9 (LinkedIn-only). Do not stop early or omit any step.\n\n{prompt}"
     
     try:
         if provider == "gemini":
@@ -631,7 +1388,7 @@ Prospect Information:
                 prompt,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.7,
-                    max_output_tokens=3000,
+                    max_output_tokens=8192,
                 )
             )
             return response.text
@@ -642,11 +1399,11 @@ Prospect Information:
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": "You are an expert B2B sales copywriter. Generate compelling, personalized outbound sequences for developer tools."},
+                    {"role": "system", "content": "You are an expert B2B sales copywriter. Generate the COMPLETE outbound sequence. You MUST include every step through Day 15 breakup (core) and Day 9 (LinkedIn-only). Do not stop early or omit any step."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=3000
+                max_tokens=8192
             )
             return response.choices[0].message.content
     except Exception as e:
@@ -654,7 +1411,7 @@ Prospect Information:
         # Check for quota/rate limit errors
         if "quota" in error_msg.lower() or "insufficient" in error_msg.lower() or "429" in error_msg or "RATE_LIMIT" in str(e):
             st.warning("⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode. You can test the full app flow without an API key.")
-            return generate_demo_sequence(persona, hypothesis, prospect_info)
+            return generate_demo_sequence(lane, hypothesis, prospect_info)
         # Try switching providers if one fails
         if provider == "openai":
             st.info("🔄 OpenAI failed, trying Gemini...")
@@ -666,15 +1423,83 @@ Prospect Information:
                         prompt,
                         generation_config=genai.types.GenerationConfig(
                             temperature=0.7,
-                            max_output_tokens=3000,
+                            max_output_tokens=8192,
                         )
                     )
                     return response.text
             except:
                 st.warning("⚠️ Both providers failed. Switching to demo mode.")
-                return generate_demo_sequence(persona, hypothesis, prospect_info)
+                return generate_demo_sequence(lane, hypothesis, prospect_info)
         st.warning("⚠️ **API Error**: Switching to demo mode.")
-        return generate_demo_sequence(persona, hypothesis, prospect_info)
+        return generate_demo_sequence(lane, hypothesis, prospect_info)
+
+
+def generate_ae_handoff(hypothesis: str) -> str:
+    """Generate AE handoff note + filled-in first call agenda from the hypothesis."""
+    provider = get_ai_provider()
+    handoff_template = load_file("prompts/ae_handoff_template.md")
+    agenda_template = load_file("prompts/agenda_template.md")
+    if not handoff_template or not agenda_template:
+        return "Missing templates: ae_handoff_template.md or agenda_template.md"
+    prompt = f"""You are an expert sales strategist. Using ONLY the hypothesis below, generate two artifacts:
+
+1. **AE Handoff Note** – Follow the structure and instructions in the handoff template. Fill every section using only details from the hypothesis. Match the tone and depth of the Canva example in the template.
+
+2. **First Call Agenda** – Follow the agenda template. Fill in every section marked "[Fill from hypothesis]" or with placeholders like [N], [API/product], [vertical], [challenge], [outcome], [Platform Engineering / relevant] using only the hypothesis. Keep all other wording from the template as written.
+
+Do not invent information. Use only what is in the hypothesis.
+
+---
+## Handoff Template (structure to follow)
+{handoff_template}
+
+---
+## Agenda Template (structure to follow, fill placeholders from hypothesis)
+{agenda_template}
+
+---
+## Hypothesis (your only source)
+{hypothesis}
+
+---
+Output your response in two clear sections with headers:
+## AE Handoff Note
+[full handoff note]
+
+## First Call Agenda
+[full filled-in agenda]
+
+**Critical:** Complete BOTH sections in full. Do not stop mid-sentence or omit the First Call Agenda. If you run out of space, prioritize finishing the agenda.
+"""
+    try:
+        if provider == "gemini":
+            model = get_gemini_client()
+            if not model:
+                raise Exception("Gemini API key not configured")
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.5,
+                    max_output_tokens=8192,
+                )
+            )
+            return response.text.strip()
+        else:
+            client = get_openai_client()
+            if not client:
+                raise Exception("OpenAI API key not configured")
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are an expert sales strategist. Generate an AE handoff note and filled-in first call agenda using ONLY the provided hypothesis. Follow the templates exactly. Do not invent information. You MUST complete both sections in full—do not stop early or omit the First Call Agenda."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.5,
+                max_tokens=8192
+            )
+            return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Error generating AE handoff: {str(e)}"
 
 
 def parse_sequence_to_csv(sequence: str, prospect_info: dict) -> pd.DataFrame:
@@ -689,13 +1514,14 @@ Convert this outbound sequence into a structured CSV format. Extract EVERY SINGL
 step_number,step_day,step_type,subject,body
 
 CRITICAL REQUIREMENTS:
-- Extract ALL steps from the sequence (there should be multiple steps, typically 6-8)
-- Do NOT skip any steps - every step in the sequence must appear in the CSV
-- Count the steps in the sequence first to ensure you capture them all
+- The core sequence has 12 steps: Day 1 (email, LinkedIn connect, call), Day 3 (email, call), Day 5 (email, call), Day 8 (email), Day 9 (call), Day 11 (email), Day 12 (call), Day 15 (breakup email). Extract ALL 12 steps.
+- There may also be a separate "LinkedIn only" sequence (Day 1, 3, 5, 9). Include those steps too if present, so the CSV can have 12 or more rows for the core sequence.
+- Do NOT stop at step 9. You MUST include steps 10, 11, 12 (Day 11 email, Day 12 call, Day 15 breakup).
+- Count the steps in the sequence and ensure the CSV has a row for every single one.
 
 Rules:
-- step_number: 1, 2, 3, 4, 5, 6, 7, 8, etc. (numeric only, sequential)
-- step_day: Extract the day number from each step (e.g., "Day 1" = 1, "Day 4" = 4)
+- step_number: 1, 2, 3, ... (numeric only, sequential)
+- step_day: Extract the day number from each step (e.g., "Day 1" = 1, "Day 15" = 15)
 - step_type: Email, LinkedIn, or Phone (exact values, case-sensitive)
 - subject: Email subject line (leave empty for LinkedIn/Phone steps)
 - body: The full message content (for phone, include opener and voicemail script)
@@ -708,7 +1534,7 @@ IMPORTANT CSV FORMATTING RULES:
 - Start immediately with the header row: step_number,step_day,step_type,subject,body
 - Each row must be on a single line (use \\n for newlines within body field)
 - Ensure all rows have the same number of columns
-- Include ALL steps - if the sequence has 8 steps, the CSV must have 8 rows
+- Include ALL 12 core steps minimum. Do not truncate.
 
 Return ONLY the raw CSV data, nothing else.
 
@@ -724,10 +1550,10 @@ Sequence to convert:
                 st.error("Gemini API key not configured for CSV export")
                 return pd.DataFrame()
             response = model.generate_content(
-                f"You are a data formatter. Convert sequences to clean CSV format.\n\n{csv_prompt}",
+                f"You are a data formatter. Convert sequences to clean CSV format. Extract ALL 12 core steps (through Day 15 breakup). Do not stop at step 9.\n\n{csv_prompt}",
                 generation_config=genai.types.GenerationConfig(
                     temperature=0,
-                    max_output_tokens=4000,  # Increased to handle all 8 steps
+                    max_output_tokens=8192,
                 )
             )
             csv_content = response.text.strip()
@@ -739,11 +1565,11 @@ Sequence to convert:
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": "You are a data formatter. Convert sequences to clean CSV format. Extract ALL steps from the sequence - do not skip any steps."},
+                    {"role": "system", "content": "You are a data formatter. Convert sequences to clean CSV format. Extract ALL 12 core steps (through Day 15 breakup). Do not stop at step 9 or skip any steps."},
                     {"role": "user", "content": csv_prompt}
                 ],
                 temperature=0,
-                max_tokens=4000  # Increased to handle all 8 steps
+                max_tokens=8192
             )
             csv_content = response.choices[0].message.content.strip()
         
@@ -887,9 +1713,112 @@ Sequence to convert:
         return pd.DataFrame()
 
 
+def render_breadcrumb(current_page: str):
+    """Render breadcrumb navigation."""
+    pages = {
+        "input": "Research Input",
+        "hypothesis": "Hypothesis",
+        "sequence": "Sequence Builder",
+        "ae_handoff": "AE Handoff"
+    }
+    
+    breadcrumb_html = '<div class="breadcrumb">'
+    breadcrumb_html += '<span class="breadcrumb-item">Home</span>'
+    
+    if current_page != "input":
+        breadcrumb_html += '<span class="breadcrumb-separator">›</span>'
+        if current_page == "ae_handoff":
+            breadcrumb_html += '<span class="breadcrumb-item">Research Input</span>'
+            breadcrumb_html += '<span class="breadcrumb-separator">›</span>'
+            breadcrumb_html += '<span class="breadcrumb-item">Hypothesis</span>'
+            breadcrumb_html += '<span class="breadcrumb-separator">›</span>'
+            breadcrumb_html += '<span class="breadcrumb-item">Sequence Builder</span>'
+            breadcrumb_html += '<span class="breadcrumb-separator">›</span>'
+            breadcrumb_html += f'<span class="breadcrumb-item active">{pages[current_page]}</span>'
+        elif current_page == "sequence":
+            breadcrumb_html += '<span class="breadcrumb-item">Research Input</span>'
+            breadcrumb_html += '<span class="breadcrumb-separator">›</span>'
+            breadcrumb_html += '<span class="breadcrumb-item">Hypothesis</span>'
+            breadcrumb_html += '<span class="breadcrumb-separator">›</span>'
+            breadcrumb_html += f'<span class="breadcrumb-item active">{pages[current_page]}</span>'
+        elif current_page == "hypothesis":
+            breadcrumb_html += '<span class="breadcrumb-item">Research Input</span>'
+            breadcrumb_html += '<span class="breadcrumb-separator">›</span>'
+            breadcrumb_html += f'<span class="breadcrumb-item active">{pages[current_page]}</span>'
+    else:
+        breadcrumb_html += f'<span class="breadcrumb-separator">›</span>'
+        breadcrumb_html += f'<span class="breadcrumb-item active">{pages[current_page]}</span>'
+    
+    breadcrumb_html += '</div>'
+    st.markdown(breadcrumb_html, unsafe_allow_html=True)
+
+
+def render_step_indicator(current_page: str):
+    """Render step indicator showing progress through the workflow."""
+    steps = [
+        {"num": 1, "label": "Research Input", "page": "input"},
+        {"num": 2, "label": "Hypothesis", "page": "hypothesis"},
+        {"num": 3, "label": "Sequence", "page": "sequence"},
+        {"num": 4, "label": "AE Handoff", "page": "ae_handoff"}
+    ]
+    
+    page_order = {"input": 0, "hypothesis": 1, "sequence": 2, "ae_handoff": 3}
+    current_index = page_order.get(current_page, 0)
+    
+    indicator_html = '<div class="step-indicator">'
+    for i, step in enumerate(steps):
+        classes = "step-item"
+        if i < current_index:
+            classes += " completed"
+        elif i == current_index:
+            classes += " active"
+        
+        indicator_html += f'<div class="{classes}">'
+        indicator_html += f'<div class="step-number">{step["num"]}</div>'
+        indicator_html += f'<div class="step-label">{step["label"]}</div>'
+        indicator_html += '</div>'
+    
+    indicator_html += '</div>'
+    st.markdown(indicator_html, unsafe_allow_html=True)
+
+
+def render_status_badges():
+    """Render status badges for demo mode and API connection."""
+    demo_mode = st.session_state.get("demo_mode", False)
+    provider = st.session_state.get("ai_provider", "gemini")
+    
+    if provider == "openai":
+        has_api_key = bool(os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key"))
+    else:
+        has_api_key = bool(os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key"))
+    
+    badges_html = '<div style="margin-bottom: 1rem;">'
+    
+    if demo_mode:
+        badges_html += '<span class="status-badge badge-demo">🎭 Demo Mode</span>'
+    else:
+        provider_name = "OpenAI" if provider == "openai" else "Gemini"
+        badges_html += f'<span class="status-badge badge-ai">🤖 {provider_name} Mode</span>'
+        
+        if has_api_key:
+            badges_html += '<span class="status-badge badge-connected">✓ Connected</span>'
+        else:
+            badges_html += '<span class="status-badge badge-disconnected">⚠ No API Key</span>'
+    
+    badges_html += '</div>'
+    st.markdown(badges_html, unsafe_allow_html=True)
+
+
 def render_sidebar():
     """Render the sidebar with navigation and settings."""
     with st.sidebar:
+        st.markdown("### About")
+        st.markdown("Generate Cursor-specific outbound hypotheses and sequences from your research.")
+        
+        # Status badges
+        render_status_badges()
+        
+        st.markdown("---")
         st.markdown("### Navigation")
         
         if st.button("1. Research Input", use_container_width=True):
@@ -900,6 +1829,9 @@ def render_sidebar():
             st.rerun()
         if st.button("3. Sequence Builder", use_container_width=True):
             st.session_state.page = "sequence"
+            st.rerun()
+        if st.button("4. AE Handoff", use_container_width=True):
+            st.session_state.page = "ae_handoff"
             st.rerun()
         
         st.markdown("---")
@@ -921,7 +1853,7 @@ def render_sidebar():
             if GEMINI_AVAILABLE:
                 provider_options.append("gemini")
             
-            current_provider = st.session_state.get("ai_provider", "openai")
+            current_provider = st.session_state.get("ai_provider", "gemini")
             # If Gemini not available and user had it selected, default to OpenAI
             if current_provider == "gemini" and not GEMINI_AVAILABLE:
                 current_provider = "openai"
@@ -930,7 +1862,7 @@ def render_sidebar():
             provider = st.radio(
                 "AI Provider",
                 provider_options,
-                index=0 if current_provider == "openai" else 1 if "gemini" in provider_options else 0,
+                index=1 if (current_provider == "gemini" and "gemini" in provider_options) else 0,
                 format_func=lambda x: "OpenAI (GPT-4o)" if x == "openai" else "Google Gemini (Free Tier)",
                 help="Gemini free tier: 1,000 requests/day, 5-15 RPM. No credit card required!" if GEMINI_AVAILABLE else "Install google-generativeai package to use Gemini"
             )
@@ -941,7 +1873,8 @@ def render_sidebar():
             
             # API Key inputs
             if provider == "openai":
-                if not os.getenv("OPENAI_API_KEY"):
+                openai_key = os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key", "")
+                if not openai_key:
                     api_key = st.text_input(
                         "OpenAI API Key",
                         type="password",
@@ -952,10 +1885,31 @@ def render_sidebar():
                     if api_key:
                         st.session_state.openai_api_key = api_key
                         st.success("✅ OpenAI API key set!")
+                        if st.button("💾 Save key for next time", key="save_openai_key"):
+                            _sf = Path(__file__).parent / "local_secrets.env"
+                            try:
+                                _lines = _sf.read_text().splitlines() if _sf.exists() else []
+                                _lines = [l for l in _lines if l.strip() and not l.startswith("OPENAI_API_KEY=")]
+                                _lines.insert(0, f"OPENAI_API_KEY={api_key}")
+                                _sf.write_text("\n".join(_lines) + "\n")
+                                st.success("✅ Key saved. Restart the app to load it automatically.")
+                            except Exception as e:
+                                st.warning(f"Could not save: {e}")
                 else:
                     st.success("✅ OpenAI API key loaded from environment")
+                    if st.button("💾 Save key for next time", key="save_openai_key"):
+                        _sf = Path(__file__).parent / "local_secrets.env"
+                        try:
+                            _lines = _sf.read_text().splitlines() if _sf.exists() else []
+                            _lines = [l for l in _lines if l.strip() and not l.startswith("OPENAI_API_KEY=")]
+                            _lines.insert(0, f"OPENAI_API_KEY={openai_key}")
+                            _sf.write_text("\n".join(_lines) + "\n")
+                            st.success("✅ Key saved to local_secrets.env.")
+                        except Exception as e:
+                            st.warning(f"Could not save: {e}")
             else:  # Gemini
-                if not os.getenv("GEMINI_API_KEY"):
+                gemini_key = os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key", "")
+                if not gemini_key:
                     api_key = st.text_input(
                         "Gemini API Key",
                         type="password",
@@ -966,8 +1920,28 @@ def render_sidebar():
                     if api_key:
                         st.session_state.gemini_api_key = api_key
                         st.success("✅ Gemini API key set!")
+                        if st.button("💾 Save key for next time", key="save_gemini_key"):
+                            _sf = Path(__file__).parent / "local_secrets.env"
+                            try:
+                                _lines = _sf.read_text().splitlines() if _sf.exists() else []
+                                _lines = [l for l in _lines if l.strip() and not l.startswith("GEMINI_API_KEY=")]
+                                _lines.insert(0, f"GEMINI_API_KEY={api_key}")
+                                _sf.write_text("\n".join(_lines) + "\n")
+                                st.success("✅ Key saved. Restart the app to load it automatically.")
+                            except Exception as e:
+                                st.warning(f"Could not save: {e}")
                 else:
                     st.success("✅ Gemini API key loaded from environment")
+                    if st.button("💾 Save key for next time", key="save_gemini_key"):
+                        _sf = Path(__file__).parent / "local_secrets.env"
+                        try:
+                            _lines = _sf.read_text().splitlines() if _sf.exists() else []
+                            _lines = [l for l in _lines if l.strip() and not l.startswith("GEMINI_API_KEY=")]
+                            _lines.insert(0, f"GEMINI_API_KEY={gemini_key}")
+                            _sf.write_text("\n".join(_lines) + "\n")
+                            st.success("✅ Key saved to local_secrets.env.")
+                        except Exception as e:
+                            st.warning(f"Could not save: {e}")
                 
                 st.info("💡 **Gemini Free Tier**: 1,000 requests/day, 5-15 RPM. Great for personal projects!")
                 
@@ -980,16 +1954,29 @@ def render_sidebar():
                         else:
                             st.warning("Could not retrieve model list. Check your API key.")
         
-        st.markdown("---")
-        st.markdown("### About")
-        st.markdown("Generate Cursor-specific outbound hypotheses and sequences from your research.")
-        
         # Reset button
         st.markdown("---")
         if st.button("🔄 Reset All", use_container_width=True, help="Clear all data and return to research input"):
-            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'prospect_info', 'csv_data']:
+            # Preserve API keys and settings
+            preserved_openai_key = st.session_state.get("openai_api_key")
+            preserved_gemini_key = st.session_state.get("gemini_api_key")
+            preserved_provider = st.session_state.get("ai_provider")
+            preserved_demo_mode = st.session_state.get("demo_mode")
+            
+            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'prospect_info', 'csv_data', 'ae_handoff']:
                 if key in st.session_state:
-                    st.session_state[key] = {} if key in ['research_data', 'prospect_info'] else None if key in ['hypothesis', 'selected_persona', 'sequence', 'csv_data'] else []
+                    st.session_state[key] = {} if key in ['research_data', 'prospect_info'] else None if key in ['hypothesis', 'selected_persona', 'sequence', 'csv_data', 'ae_handoff'] else []
+            
+            # Restore preserved values
+            if preserved_openai_key:
+                st.session_state.openai_api_key = preserved_openai_key
+            if preserved_gemini_key:
+                st.session_state.gemini_api_key = preserved_gemini_key
+            if preserved_provider:
+                st.session_state.ai_provider = preserved_provider
+            if preserved_demo_mode is not None:
+                st.session_state.demo_mode = preserved_demo_mode
+            
             st.session_state.page = "input"
             st.rerun()
 
@@ -998,6 +1985,10 @@ def render_input_page():
     """Screen 1: Research Input"""
     st.title("🎯 Outbound Engine")
     
+    # Breadcrumb and step indicator
+    render_breadcrumb("input")
+    render_step_indicator("input")
+    
     # Refresh button at the top
     col_title, col_refresh = st.columns([4, 1])
     with col_title:
@@ -1005,10 +1996,27 @@ def render_input_page():
         st.markdown("Paste your research below to generate a Cursor-specific outbound hypothesis.")
     with col_refresh:
         if st.button("🔄 Refresh / Start Over", use_container_width=True, help="Clear all data and start fresh"):
+            # Preserve API keys and settings
+            preserved_openai_key = st.session_state.get("openai_api_key")
+            preserved_gemini_key = st.session_state.get("gemini_api_key")
+            preserved_provider = st.session_state.get("ai_provider")
+            preserved_demo_mode = st.session_state.get("demo_mode")
+            
             # Clear all session state
-            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'prospect_info', 'csv_data']:
+            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'sequences', 'selected_lanes', 'current_sequence_lane_id', 'prospect_info', 'csv_data', 'ae_handoff']:
                 if key in st.session_state:
-                    st.session_state[key] = {} if key in ['research_data', 'prospect_info'] else None if key in ['hypothesis', 'selected_persona', 'sequence'] else [] if key == 'personas' else None
+                    st.session_state[key] = {} if key in ['research_data', 'prospect_info', 'sequences'] else None if key in ['hypothesis', 'selected_persona', 'sequence', 'csv_data', 'ae_handoff', 'current_sequence_lane_id'] else [] if key in ['personas', 'selected_lanes'] else None
+            
+            # Restore preserved values
+            if preserved_openai_key:
+                st.session_state.openai_api_key = preserved_openai_key
+            if preserved_gemini_key:
+                st.session_state.gemini_api_key = preserved_gemini_key
+            if preserved_provider:
+                st.session_state.ai_provider = preserved_provider
+            if preserved_demo_mode is not None:
+                st.session_state.demo_mode = preserved_demo_mode
+            
             st.session_state.page = "input"
             st.rerun()
     
@@ -1024,7 +2032,7 @@ def render_input_page():
         
         job_postings = st.text_area(
             "Relevant Job Postings",
-            placeholder="Paste 1-2 relevant job postings\n\nLook for: DevEx, Platform Engineering, Developer Productivity roles...",
+            placeholder="Paste as many relevant job postings as you have (3–5+ improves hypothesis quality).\n\nLook for: DevEx, Platform Engineering, Developer Productivity roles...",
             height=200,
             value=st.session_state.research_data.get("job_postings", "")
         )
@@ -1032,7 +2040,7 @@ def render_input_page():
     with col2:
         linkedin_profiles = st.text_area(
             "Target Persona LinkedIn Profiles",
-            placeholder="Paste 1-2 LinkedIn profiles of target personas\n\nInclude: name, title, background, recent posts...",
+            placeholder="Paste as many target persona profiles as you have (3–5+ improves hypothesis and sequences).\n\nInclude: name, title, background, recent posts...",
             height=200,
             value=st.session_state.research_data.get("linkedin_profiles", "")
         )
@@ -1043,6 +2051,15 @@ def render_input_page():
             height=200,
             value=st.session_state.research_data.get("news_signals", "")
         )
+    
+    st.markdown("#### Optional: Current customers to reference")
+    reference_customers = st.text_area(
+        "Current customers / references (similar accounts)",
+        placeholder="Paste a short list of current customers you can reference (similar to this account).\n\nWe'll weave 1–2 references into the sequence (e.g. 'Teams at [X] have seen...'). Not required.",
+        height=100,
+        value=st.session_state.research_data.get("reference_customers", ""),
+        key="research_reference_customers"
+    )
     
     # Check if API key is configured or demo mode is enabled
     demo_mode = st.session_state.get("demo_mode", False)
@@ -1068,7 +2085,8 @@ def render_input_page():
             "company_info": company_info,
             "job_postings": job_postings,
             "linkedin_profiles": linkedin_profiles,
-            "news_signals": news_signals
+            "news_signals": news_signals,
+            "reference_customers": reference_customers.strip() if reference_customers else ""
         }
         
         # Generate hypothesis
@@ -1089,16 +2107,37 @@ def render_hypothesis_page():
     """Screen 2: Hypothesis Output"""
     st.title("🎯 Outbound Engine")
     
+    # Breadcrumb and step indicator
+    render_breadcrumb("hypothesis")
+    render_step_indicator("hypothesis")
+    
     # Refresh button at the top
     col_title, col_refresh = st.columns([4, 1])
     with col_title:
         st.markdown("### Outbound Hypothesis")
     with col_refresh:
         if st.button("🔄 Refresh / Start Over", use_container_width=True, help="Clear all data and start fresh"):
+            # Preserve API keys and settings
+            preserved_openai_key = st.session_state.get("openai_api_key")
+            preserved_gemini_key = st.session_state.get("gemini_api_key")
+            preserved_provider = st.session_state.get("ai_provider")
+            preserved_demo_mode = st.session_state.get("demo_mode")
+            
             # Clear all session state
-            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'prospect_info', 'csv_data']:
+            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'sequences', 'selected_lanes', 'current_sequence_lane_id', 'prospect_info', 'csv_data', 'ae_handoff']:
                 if key in st.session_state:
-                    st.session_state[key] = {} if key in ['research_data', 'prospect_info'] else None if key in ['hypothesis', 'selected_persona', 'sequence', 'csv_data'] else [] if key == 'personas' else None
+                    st.session_state[key] = {} if key in ['research_data', 'prospect_info', 'sequences'] else None if key in ['hypothesis', 'selected_persona', 'sequence', 'csv_data', 'ae_handoff', 'current_sequence_lane_id'] else [] if key in ['personas', 'selected_lanes'] else None
+            
+            # Restore preserved values
+            if preserved_openai_key:
+                st.session_state.openai_api_key = preserved_openai_key
+            if preserved_gemini_key:
+                st.session_state.gemini_api_key = preserved_gemini_key
+            if preserved_provider:
+                st.session_state.ai_provider = preserved_provider
+            if preserved_demo_mode is not None:
+                st.session_state.demo_mode = preserved_demo_mode
+            
             st.session_state.page = "input"
             st.rerun()
     
@@ -1112,13 +2151,6 @@ def render_hypothesis_page():
     # Show the hypothesis
     if st.session_state.hypothesis:
         st.markdown(st.session_state.hypothesis)
-        
-        # Show extracted personas
-        if st.session_state.personas:
-            st.markdown("---")
-            st.markdown("#### Extracted Target Personas")
-            for i, persona in enumerate(st.session_state.personas, 1):
-                st.markdown(f"{i}. **{persona}**")
     else:
         # Generate if not yet done
         demo_mode = st.session_state.get("demo_mode", False)
@@ -1157,16 +2189,37 @@ def render_sequence_page():
     """Screen 3: Sequence Builder"""
     st.title("🎯 Outbound Engine")
     
+    # Breadcrumb and step indicator
+    render_breadcrumb("sequence")
+    render_step_indicator("sequence")
+    
     # Refresh button at the top
     col_title, col_refresh = st.columns([4, 1])
     with col_title:
         st.markdown("### Sequence Builder")
     with col_refresh:
         if st.button("🔄 Refresh / Start Over", use_container_width=True, help="Clear all data and start fresh"):
+            # Preserve API keys and settings
+            preserved_openai_key = st.session_state.get("openai_api_key")
+            preserved_gemini_key = st.session_state.get("gemini_api_key")
+            preserved_provider = st.session_state.get("ai_provider")
+            preserved_demo_mode = st.session_state.get("demo_mode")
+            
             # Clear all session state
-            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'prospect_info', 'csv_data']:
+            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'sequences', 'selected_lanes', 'current_sequence_lane_id', 'prospect_info', 'csv_data', 'ae_handoff']:
                 if key in st.session_state:
-                    st.session_state[key] = {} if key in ['research_data', 'prospect_info'] else None if key in ['hypothesis', 'selected_persona', 'sequence', 'csv_data'] else [] if key == 'personas' else None
+                    st.session_state[key] = {} if key in ['research_data', 'prospect_info', 'sequences'] else None if key in ['hypothesis', 'selected_persona', 'sequence', 'csv_data', 'ae_handoff', 'current_sequence_lane_id'] else [] if key in ['personas', 'selected_lanes'] else None
+            
+            # Restore preserved values
+            if preserved_openai_key:
+                st.session_state.openai_api_key = preserved_openai_key
+            if preserved_gemini_key:
+                st.session_state.gemini_api_key = preserved_gemini_key
+            if preserved_provider:
+                st.session_state.ai_provider = preserved_provider
+            if preserved_demo_mode is not None:
+                st.session_state.demo_mode = preserved_demo_mode
+            
             st.session_state.page = "input"
             st.rerun()
     
@@ -1177,63 +2230,54 @@ def render_sequence_page():
             st.rerun()
         return
     
-    # Prospect information form
-    st.markdown("#### Prospect Information")
-    st.markdown("Enter details about your target prospect for personalized sequences.")
+    # Load persona lanes
+    persona_lanes = load_persona_lanes()
+    if not persona_lanes:
+        st.warning("No persona lanes found. Add **kb/persona_lanes.md** with your persona buckets (see kb/README).")
+    
+    # Persona lane selection (1–3 scalable sequences)
+    st.markdown("#### Persona Lanes")
+    st.markdown("Select 1–3 persona lanes to generate scalable sequences you can use across many prospects in each bucket.")
+    
+    lane_options = [f"{lane['id']}. {lane['name']}" for lane in persona_lanes]
+    lane_labels_to_lane = {f"{lane['id']}. {lane['name']}": lane for lane in persona_lanes}
+    
+    # Use key= so Streamlit tracks selection reliably (avoids buggy re-selects)
+    if "persona_lane_multiselect" not in st.session_state:
+        st.session_state.persona_lane_multiselect = lane_options[:1] if lane_options else []
+    selected_labels = st.multiselect(
+        "Choose persona lanes (1–3)",
+        options=lane_options,
+        max_selections=3,
+        key="persona_lane_multiselect",
+        help="Pick the audience buckets you want sequences for. Each gets its own hook and Cursor play."
+    )
+    st.session_state.selected_lanes = list(st.session_state.get("persona_lane_multiselect", selected_labels))
+    
+    # Optional example prospect (for draft personalization)
+    st.markdown("#### Example prospect (optional)")
+    st.markdown("Add one prospect to personalize the draft; otherwise sequences use placeholders like [First Name] and [Company] so you can scale.")
     
     col1, col2 = st.columns(2)
-    
     with col1:
-        first_name = st.text_input(
-            "First Name",
-            value=st.session_state.prospect_info.get("first_name", ""),
-            placeholder="John"
-        )
-        last_name = st.text_input(
-            "Last Name",
-            value=st.session_state.prospect_info.get("last_name", ""),
-            placeholder="Smith"
-        )
-        email = st.text_input(
-            "Email",
-            value=st.session_state.prospect_info.get("email", ""),
-            placeholder="john.smith@company.com"
-        )
-    
+        first_name = st.text_input("First Name", value=st.session_state.prospect_info.get("first_name", ""), placeholder="John")
+        last_name = st.text_input("Last Name", value=st.session_state.prospect_info.get("last_name", ""), placeholder="Smith")
+        email = st.text_input("Email", value=st.session_state.prospect_info.get("email", ""), placeholder="john.smith@company.com")
     with col2:
-        company = st.text_input(
-            "Company",
-            value=st.session_state.prospect_info.get("company", ""),
-            placeholder="Acme Corp"
-        )
-        
-        # Persona selection
-        personas = st.session_state.personas if st.session_state.personas else ["VP/Director of Engineering", "Platform/DevEx Engineering Lead", "CTO"]
-        selected_persona = st.selectbox(
-            "Target Persona",
-            personas,
-            index=0
-        )
-        
-        title = st.text_input(
-            "Job Title (optional - defaults to persona)",
-            value=st.session_state.prospect_info.get("title", ""),
-            placeholder=selected_persona
-        )
+        company = st.text_input("Company", value=st.session_state.prospect_info.get("company", ""), placeholder="Acme Corp")
+        title = st.text_input("Job Title (optional)", value=st.session_state.prospect_info.get("title", ""), placeholder="VP Engineering")
     
-    # Store prospect info
     st.session_state.prospect_info = {
         "first_name": first_name,
         "last_name": last_name,
         "email": email,
         "company": company,
-        "title": title or selected_persona
+        "title": title
     }
-    st.session_state.selected_persona = selected_persona
     
     st.markdown("---")
     
-    # Generate sequence button
+    # Generate sequences button
     demo_mode = st.session_state.get("demo_mode", False)
     provider = get_ai_provider()
     if provider == "openai":
@@ -1242,40 +2286,64 @@ def render_sequence_page():
         has_api_key = bool(os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key"))
     can_generate = demo_mode or has_api_key
     
-    if st.button("Generate Sequence", type="primary", use_container_width=True, disabled=not can_generate):
-        if not first_name or not company:
-            st.error("Please provide at least a first name and company.")
+    if st.button("Generate sequences", type="primary", use_container_width=True, disabled=not can_generate):
+        if not selected_labels:
+            st.error("Please select at least one persona lane.")
         else:
-            with st.spinner("Generating personalized sequence..." if not demo_mode else "Generating sample sequence..."):
-                sequence = generate_sequence(
-                    selected_persona,
-                    st.session_state.hypothesis,
-                    st.session_state.prospect_info,
-                    use_demo=demo_mode
-                )
-                st.session_state.sequence = sequence
+            lanes_to_gen = [lane_labels_to_lane[label] for label in selected_labels if label in lane_labels_to_lane]
+            if not lanes_to_gen:
+                st.error("Could not resolve selected lanes.")
+            else:
+                st.session_state.sequences = {}
+                for idx, lane in enumerate(lanes_to_gen):
+                    with st.spinner(f"Generating sequence {idx + 1}/{len(lanes_to_gen)}: {lane['name']}..." if not demo_mode else f"Sample sequence {idx + 1}/{len(lanes_to_gen)}: {lane['name']}..."):
+                        content = generate_sequence(
+                            lane,
+                            st.session_state.hypothesis,
+                            st.session_state.prospect_info,
+                            use_demo=demo_mode,
+                            reference_customers=st.session_state.research_data.get("reference_customers", "")
+                        )
+                        st.session_state.sequences[lane["id"]] = {"name": lane["name"], "content": content}
+                st.session_state.current_sequence_lane_id = lanes_to_gen[0]["id"]
+                st.session_state.csv_data = None
                 st.rerun()
     
-    # Display generated sequence
-    if st.session_state.sequence:
+    # Display generated sequences (selector + one at a time)
+    if st.session_state.sequences:
         st.markdown("---")
-        st.markdown("#### Generated Sequence")
-        st.markdown(st.session_state.sequence)
+        lane_ids = list(st.session_state.sequences.keys())
+        current_id = st.session_state.current_sequence_lane_id or lane_ids[0]
+        if current_id not in lane_ids:
+            current_id = lane_ids[0]
+            st.session_state.current_sequence_lane_id = current_id
         
-        # Export section
+        display_names = [st.session_state.sequences[lid]["name"] for lid in lane_ids]
+        selected_index = lane_ids.index(current_id)
+        chosen = st.selectbox("View sequence", options=display_names, index=selected_index)
+        st.session_state.current_sequence_lane_id = lane_ids[display_names.index(chosen)]
+        current_content = st.session_state.sequences[st.session_state.current_sequence_lane_id]["content"]
+        
+        st.markdown(f"#### {chosen}")
+        st.markdown(current_content)
+        
+        # Export section (for current sequence)
         st.markdown("---")
         st.markdown("#### Export to Outreach.io")
-        
+        export_prospect = st.session_state.prospect_info
+        if not export_prospect.get("first_name") or not export_prospect.get("company"):
+            export_prospect = {
+                "first_name": "[First Name]",
+                "last_name": "[Last Name]",
+                "email": "[Email]",
+                "company": "[Company]",
+                "title": "[Title]"
+            }
         col1, col2 = st.columns(2)
-        
         with col1:
-            demo_mode = st.session_state.get("demo_mode", False)
             if st.button("Generate CSV Export", use_container_width=True, disabled=demo_mode):
                 with st.spinner("Formatting sequence for export..."):
-                    df = parse_sequence_to_csv(
-                        st.session_state.sequence,
-                        st.session_state.prospect_info
-                    )
+                    df = parse_sequence_to_csv(current_content, export_prospect)
                     if not df.empty:
                         st.session_state.csv_data = df.to_csv(index=False)
                         step_count = len(df)
@@ -1284,32 +2352,101 @@ def render_sequence_page():
                         st.dataframe(df, use_container_width=True)
             elif demo_mode:
                 st.info("💡 CSV export requires API access. Enable AI mode in sidebar to export.")
-        
         with col2:
             if st.session_state.get("csv_data"):
+                safe_name = (export_prospect.get("company") or chosen).replace(" ", "_").replace("[", "").replace("]", "").lower()
                 st.download_button(
                     "Download CSV",
                     data=st.session_state.csv_data,
-                    file_name=f"outreach_sequence_{st.session_state.prospect_info.get('company', 'export').replace(' ', '_').lower()}.csv",
+                    file_name=f"outreach_sequence_{safe_name}.csv",
                     mime="text/csv",
                     use_container_width=True
                 )
     
     # Navigation
     st.markdown("---")
-    col1, col2 = st.columns(2)
-    
+    col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("← Back to Hypothesis"):
             st.session_state.page = "hypothesis"
             st.rerun()
-    
     with col2:
-        if st.session_state.sequence:
-            if st.button("Generate for Another Persona", use_container_width=True):
-                st.session_state.sequence = None
+        if st.session_state.sequences:
+            if st.button("Generate different lanes", use_container_width=True):
+                st.session_state.sequences = {}
+                st.session_state.selected_lanes = []
+                st.session_state.current_sequence_lane_id = None
                 st.session_state.csv_data = None
+                if "persona_lane_multiselect" in st.session_state:
+                    st.session_state.persona_lane_multiselect = []
                 st.rerun()
+    with col3:
+        if st.button("AE Handoff →", type="primary", use_container_width=True):
+            st.session_state.page = "ae_handoff"
+            st.rerun()
+
+
+def render_ae_handoff_page():
+    """Screen 4: AE Handoff - handoff note + first call agenda from hypothesis."""
+    st.title("🎯 Outbound Engine")
+    
+    render_breadcrumb("ae_handoff")
+    render_step_indicator("ae_handoff")
+    
+    col_title, col_refresh = st.columns([4, 1])
+    with col_title:
+        st.markdown("### AE Handoff")
+        st.markdown("Generate a handoff note and first call agenda for the Account Executive from the hypothesis.")
+    with col_refresh:
+        if st.button("🔄 Refresh / Start Over", use_container_width=True, help="Clear all data and start fresh"):
+            preserved_openai_key = st.session_state.get("openai_api_key")
+            preserved_gemini_key = st.session_state.get("gemini_api_key")
+            preserved_provider = st.session_state.get("ai_provider")
+            preserved_demo_mode = st.session_state.get("demo_mode")
+            for key in ['research_data', 'hypothesis', 'personas', 'selected_persona', 'sequence', 'sequences', 'selected_lanes', 'current_sequence_lane_id', 'prospect_info', 'csv_data', 'ae_handoff']:
+                if key in st.session_state:
+                    st.session_state[key] = {} if key in ['research_data', 'prospect_info', 'sequences'] else None if key in ['hypothesis', 'selected_persona', 'sequence', 'csv_data', 'ae_handoff', 'current_sequence_lane_id'] else [] if key in ['personas', 'selected_lanes'] else None
+            if preserved_openai_key:
+                st.session_state.openai_api_key = preserved_openai_key
+            if preserved_gemini_key:
+                st.session_state.gemini_api_key = preserved_gemini_key
+            if preserved_provider:
+                st.session_state.ai_provider = preserved_provider
+            if preserved_demo_mode is not None:
+                st.session_state.demo_mode = preserved_demo_mode
+            st.session_state.page = "input"
+            st.rerun()
+    
+    if not st.session_state.hypothesis:
+        st.warning("No hypothesis found. Generate a hypothesis first (Research Input → Generate Hypothesis).")
+        if st.button("← Back to Hypothesis"):
+            st.session_state.page = "hypothesis"
+            st.rerun()
+        return
+    
+    demo_mode = st.session_state.get("demo_mode", False)
+    provider = get_ai_provider()
+    has_api_key = bool(os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key")) if provider == "openai" else bool(os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key"))
+    can_generate = has_api_key and not demo_mode
+    
+    if st.button("Generate AE Handoff", type="primary", use_container_width=True, disabled=not can_generate):
+        with st.spinner("Generating handoff note and first call agenda..."):
+            result = generate_ae_handoff(st.session_state.hypothesis)
+            st.session_state.ae_handoff = result
+            st.rerun()
+    
+    if demo_mode and not has_api_key:
+        st.info("💡 Enable AI mode and add an API key in the sidebar to generate the AE handoff.")
+    
+    if st.session_state.ae_handoff:
+        st.markdown("---")
+        st.markdown("#### Generated AE Handoff")
+        st.markdown(st.session_state.ae_handoff)
+    
+    st.markdown("---")
+    if st.button("← Back to Sequence Builder"):
+        st.session_state.page = "sequence"
+        st.rerun()
 
 
 def main():
@@ -1323,6 +2460,8 @@ def main():
         render_hypothesis_page()
     elif st.session_state.page == "sequence":
         render_sequence_page()
+    elif st.session_state.page == "ae_handoff":
+        render_ae_handoff_page()
 
 
 if __name__ == "__main__":
