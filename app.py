@@ -7,6 +7,7 @@ import streamlit as st
 import os
 import io
 import re
+import time
 import pandas as pd
 from pathlib import Path
 from openai import OpenAI
@@ -1226,8 +1227,9 @@ def generate_hypothesis_with_ai(prompt: str, provider: str) -> str:
             return response.text
         except Exception as e:
             error_msg = str(e)
+            st.session_state["last_api_error_raw"] = error_msg  # full message from Gemini
             # Check for rate limit errors
-            if "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+            if "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower() or "resource_exhausted" in error_msg.lower():
                 raise Exception("RATE_LIMIT")
             raise e
     else:  # OpenAI
@@ -1291,8 +1293,15 @@ def generate_hypothesis(research_data: dict, use_demo: bool = False) -> str:
         error_msg = str(e)
         st.session_state["last_api_error"] = error_msg
         if "QUOTA_EXCEEDED" in error_msg or "RATE_LIMIT" in error_msg:
-            st.warning(f"⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode.")
-            return generate_demo_hypothesis(research_data)
+            # Retry once after a short wait (Gemini free tier has strict RPM limits)
+            st.info("⏳ Rate limit hit. Waiting 20 seconds and retrying once...")
+            time.sleep(20)
+            try:
+                return generate_hypothesis_with_ai(prompt, provider)
+            except Exception as retry_e:
+                st.session_state["last_api_error"] = str(retry_e)
+                st.warning("⚠️ **Rate limit still in effect.** Gemini's free tier allows ~15 requests/minute. Wait a minute and try again, or enable billing in [Google AI Studio](https://aistudio.google.com) for higher limits. Using demo mode for this run.")
+                return generate_demo_hypothesis(research_data)
         # Show actual error so user can see invalid key, permission, etc.
         st.error(f"⚠️ **API Error**: {error_msg[:500]}")
         st.info("Switching to demo mode. If this is an auth/key error, check Streamlit Secrets (GEMINI_API_KEY) and redeploy.")
@@ -1305,12 +1314,22 @@ def generate_hypothesis(research_data: dict, use_demo: bool = False) -> str:
         return generate_demo_hypothesis(research_data)
 
 
-def extract_personas_from_hypothesis(hypothesis: str) -> list:
-    """Extract persona recommendations from the hypothesis."""
-    # Check for demo mode
+def extract_personas_from_hypothesis(hypothesis: str, use_api: bool = False) -> list:
+    """Extract persona recommendations from the hypothesis. use_api=False avoids an extra API call (saves quota)."""
     if st.session_state.get("demo_mode", False):
         return ["VP/Director of Engineering", "Platform/DevEx Engineering Lead", "CTO"]
-    
+    # Text-based extraction first (no API call) - sequences use persona lanes now
+    out = []
+    if "VP" in hypothesis or "Director" in hypothesis:
+        out.append("VP/Director of Engineering")
+    if "Platform" in hypothesis or "DevEx" in hypothesis:
+        out.append("Platform/DevEx Engineering Lead")
+    if "CTO" in hypothesis:
+        out.append("CTO")
+    if out:
+        return out
+    if not use_api:
+        return ["VP/Director of Engineering", "Platform/DevEx Engineering Lead", "CTO"]
     provider = get_ai_provider()
     prompt = f"Extract the recommended target personas from this sales hypothesis. Return ONLY a Python list of job titles, nothing else. Example: [\"VP Engineering\", \"DevEx Lead\", \"CTO\"]\n\n{hypothesis}"
     
@@ -1346,19 +1365,9 @@ def extract_personas_from_hypothesis(hypothesis: str) -> list:
         personas = ast.literal_eval(content)
         if isinstance(personas, list) and len(personas) > 0:
             return personas
-    except:
+    except Exception:
         pass
-    
-    # Fallback - try to extract from hypothesis text
-    personas = []
-    if "VP" in hypothesis or "Director" in hypothesis:
-        personas.append("VP/Director of Engineering")
-    if "Platform" in hypothesis or "DevEx" in hypothesis:
-        personas.append("Platform/DevEx Engineering Lead")
-    if "CTO" in hypothesis:
-        personas.append("CTO")
-    
-    return personas if personas else ["VP/Director of Engineering", "Platform/DevEx Engineering Lead", "CTO"]
+    return ["VP/Director of Engineering", "Platform/DevEx Engineering Lead", "CTO"]
 
 
 def generate_sequence(lane: dict, hypothesis: str, prospect_info: dict, use_demo: bool = False, reference_customers: str = "") -> str:
@@ -1470,7 +1479,22 @@ No specific prospect—use placeholders so this sequence can scale:
         st.session_state["last_api_error"] = error_msg
         is_quota = "quota" in error_msg.lower() or "insufficient" in error_msg.lower() or "429" in error_msg or "RATE_LIMIT" in str(e) or "resource_exhausted" in error_msg.lower()
         if is_quota:
-            st.warning("⚠️ **API Quota/Rate Limit Exceeded**: Switching to demo mode.")
+            st.info("⏳ Rate limit hit. Waiting 20 seconds and retrying once...")
+            time.sleep(20)
+            try:
+                if provider == "gemini":
+                    model = get_gemini_client()
+                    if model:
+                        response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(temperature=0.7, max_output_tokens=8192))
+                        return response.text
+                else:
+                    client = get_openai_client()
+                    if client:
+                        response = client.chat.completions.create(model="gpt-4o", messages=[{"role": "system", "content": "You are an expert B2B sales copywriter. Generate the COMPLETE outbound sequence."}, {"role": "user", "content": prompt}], temperature=0.7, max_tokens=8192)
+                        return response.choices[0].message.content
+            except Exception as retry_e:
+                st.session_state["last_api_error"] = str(retry_e)
+            st.warning("⚠️ **Rate limit still in effect.** Wait a minute and try again, or enable billing in Google AI Studio for higher limits. Using demo mode for this run.")
             return generate_demo_sequence(lane, hypothesis, prospect_info)
         st.error(f"⚠️ **API Error**: {error_msg[:500]}")
         st.info("Switching to demo mode. If this is an auth/key error, check Streamlit Secrets (GEMINI_API_KEY) and redeploy.")
@@ -1889,8 +1913,10 @@ def _debug_secrets():
             st.caption("Gemini key present: **yes** (" + str(len(gkey)) + " chars)" if gkey else "Gemini key present: **no**")
             st.caption("In os.environ: " + from_env)
             st.caption("st.secrets keys: " + ", ".join(str(k) for k in secret_keys[:20]))
-            if st.session_state.get("last_api_error"):
-                st.error("Last error: " + (st.session_state["last_api_error"][:200] + "…" if len(st.session_state["last_api_error"]) > 200 else st.session_state["last_api_error"]))
+            raw = st.session_state.get("last_api_error_raw") or st.session_state.get("last_api_error")
+            if raw:
+                st.caption("Last error (raw):")
+                st.text(raw[:400] + "…" if len(raw) > 400 else raw)
 
 
 def render_sidebar():
